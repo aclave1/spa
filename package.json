@@ -1,0 +1,21 @@
+{
+  "name": "spa",
+  "version": "1.0.0",
+  "description": "Simple single page app router",
+  "main": "index.js",
+  "scripts": {
+    "test": "npm test"
+  },
+  "keywords": [
+    "router",
+    "spa"
+  ],
+  "author": "alex clavelle",
+  "license": "MIT",
+  "dependencies": {
+    "history": "^1.13.1"
+  },
+  "devDependencies": {
+    "webpack": "^1.12.8"
+  }
+}
