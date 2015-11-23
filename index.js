@@ -3,7 +3,6 @@ var History = createHistory();
 
 function Router(config){
     var routes = buildRoutesTable(config.routes);
-    var baseUrl = !undef(config.baseUrl) ? config.baseUrl : '';
     var displayMethods = {
         scroll:scrollTo,
         show:showEl,
@@ -23,7 +22,7 @@ function Router(config){
     
     function goToStartingState(){
         var uri = parseUri(window.location.href);
-        if(normalizeUrl(uri.path) !== normalizeUrl(baseUrl)){
+        if(uri.path !== '/'){
             return navigateTo(uri.path);
         }
         return navigateTo(getDefaultRoute());
@@ -89,9 +88,6 @@ function Router(config){
 
     function normalizeUrl(url){
         var _url = url;
-        
-        if(url.indexOf(baseUrl) > -1) _url= url.replace(baseUrl);
-
         if(url.charAt(0)==='/')_url = _url.slice(1);
         if(url.slice(-1)==='/')_url = _url.slice(0,-1);
         return _url;
