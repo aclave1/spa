@@ -3,6 +3,7 @@ var History = createHistory();
 
 function Router(config){
     var routes = buildRoutesTable(config.routes);
+    var currentState = null;
     var displayMethods = {
         scroll:scrollTo,
         show:showEl,
@@ -12,7 +13,23 @@ function Router(config){
     startRouter();
     goToStartingState();
 
+    this.goToStateById = goToStateById;
+    this.getCurrentState = getCurrentState;
+
+    /**public api*/
+    function goToStateById(elementId){
+        var routeWithId = objectFind(routes,function(route){
+            return route.elId === elementId;
+        });
+        if(undef(elementId))console.error('Cannot go to state with element id: '+elementId);
+        enterState(routeWithId);
+    }
     
+    function getCurrentState(){
+        return currentState;
+    }
+
+    /**private api*/
     function startRouter(){
         History.listen(function(state){ // Note: We are using statechange instead of popstate
             var url = parseUri(state.pathname);
@@ -22,20 +39,31 @@ function Router(config){
     
     function goToStartingState(){
         var uri = parseUri(window.location.href);
+        currentState=routes[normalizeUrl(uri.path)];
         if(uri.path !== '/'){
-            return navigateTo(uri.path);
+            return enterState(currentState);
         }
-        return navigateTo(getDefaultRoute());
+        var defaultState = getDefaultState(); 
+        return defaultState !== null ?  enterState(defaultState) : false;//if there's no default state, do nothing.
     }
 
-    function getDefaultRoute(){
+    function enterState(state){
+        if(state === null || undef(state)) console.error('invalid state');
+        currentState=state;
+        History.pushState(null,state.url);
+        navigateTo(state.url);
+    }
+
+    function getDefaultState(){
+        //override the dom if a route was passed into the constructor
+        if(!undef(config.defaultRoute)) return routes[config.defaultRoute];
         var defaultRoute = Object
             .keys(routes)
             .filter(function(key){
                 return routes[key].defaultRoute === true;
             })
             .pop();
-        return !undef(defaultRoute) ? defaultRoute : ''; 
+        return !undef(defaultRoute) ? routes[defaultRoute] : null; 
 
     }
 
@@ -57,16 +85,19 @@ function Router(config){
         var route = routes[normalizeUrl(url)];
         if(!undef(route)){
             var el = $('#'+route.elId);
-            var fn = displayMethods[config.display];
+            //if config.display is a function, allow a custom animation
+            var fn = typeof config.display === 'function' ? config.display : displayMethods[config.display];
             if(undef(fn)) fn = displayMethods.scroll;
             return fn(el);
         }
     }
 
     function scrollTo(el){
-        $('html, body').animate({
-            scrollTop: el.offset().top
-        }, 500);
+        $('html, body')
+            .clearQueue()//prevents janky scrolling if this method is called frequently
+            .animate({
+                scrollTop: el.offset().top
+            }, 500);
     }
 
     function showEl(el){
@@ -99,7 +130,17 @@ function Router(config){
             table[url] = route;
             return table;
         },{});
-    }  
+    }
+
+    function objectFind(obj,fn){
+        for(var k in obj){
+            if(obj.hasOwnProperty(k)){
+                var found = fn(obj[k]);
+                if(found){return obj[k]}
+            }
+        }
+        return null;
+    }
 }
 
 //static method to build the routes list from the dom
