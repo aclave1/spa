@@ -50,7 +50,7 @@ var Spa =
 
 	function Router(config){
 	    var routes = buildRoutesTable(config.routes);
-	    var baseUrl = !undef(config.baseUrl) ? config.baseUrl : '';
+	    var currentState = null;
 	    var displayMethods = {
 	        scroll:scrollTo,
 	        show:showEl,
@@ -60,7 +60,23 @@ var Spa =
 	    startRouter();
 	    goToStartingState();
 
+	    this.goToStateById = goToStateById;
+	    this.getCurrentState = getCurrentState;
+
+	    /**public api*/
+	    function goToStateById(elementId){
+	        var routeWithId = objectFind(routes,function(route){
+	            return route.elId === elementId;
+	        });
+	        if(undef(elementId))console.error('Cannot go to state with element id: '+elementId);
+	        enterState(routeWithId);
+	    }
 	    
+	    function getCurrentState(){
+	        return currentState;
+	    }
+
+	    /**private api*/
 	    function startRouter(){
 	        History.listen(function(state){ // Note: We are using statechange instead of popstate
 	            var url = parseUri(state.pathname);
@@ -70,20 +86,31 @@ var Spa =
 	    
 	    function goToStartingState(){
 	        var uri = parseUri(window.location.href);
-	        if(normalizeUrl(uri.path) !== normalizeUrl(baseUrl)){
-	            return navigateTo(uri.path);
+	        currentState=routes[normalizeUrl(uri.path)];
+	        if(uri.path !== '/'){
+	            return enterState(currentState);
 	        }
-	        return navigateTo(getDefaultRoute());
+	        var defaultState = getDefaultState(); 
+	        return defaultState !== null ?  enterState(defaultState) : false;//if there's no default state, do nothing.
 	    }
 
-	    function getDefaultRoute(){
+	    function enterState(state){
+	        if(state === null || undef(state)) console.error('invalid state');
+	        currentState=state;
+	        History.pushState(null,state.url);
+	        navigateTo(state.url);
+	    }
+
+	    function getDefaultState(){
+	        //override the dom if a route was passed into the constructor
+	        if(!undef(config.defaultRoute)) return routes[config.defaultRoute];
 	        var defaultRoute = Object
 	            .keys(routes)
 	            .filter(function(key){
 	                return routes[key].defaultRoute === true;
 	            })
 	            .pop();
-	        return !undef(defaultRoute) ? defaultRoute : ''; 
+	        return !undef(defaultRoute) ? routes[defaultRoute] : null; 
 
 	    }
 
@@ -105,16 +132,19 @@ var Spa =
 	        var route = routes[normalizeUrl(url)];
 	        if(!undef(route)){
 	            var el = $('#'+route.elId);
-	            var fn = displayMethods[config.display];
+	            //if config.display is a function, allow a custom animation
+	            var fn = typeof config.display === 'function' ? config.display : displayMethods[config.display];
 	            if(undef(fn)) fn = displayMethods.scroll;
 	            return fn(el);
 	        }
 	    }
 
 	    function scrollTo(el){
-	        $('html, body').animate({
-	            scrollTop: el.offset().top
-	        }, 500);
+	        $('html, body')
+	            .clearQueue()//prevents janky scrolling if this method is called frequently
+	            .animate({
+	                scrollTop: el.offset().top
+	            }, 500);
 	    }
 
 	    function showEl(el){
@@ -135,10 +165,8 @@ var Spa =
 	    }
 
 	    function normalizeUrl(url){
+	        if(undef(url))debugger;
 	        var _url = url;
-	        
-	        if(url.indexOf(baseUrl) > -1) _url= url.replace(baseUrl);
-
 	        if(url.charAt(0)==='/')_url = _url.slice(1);
 	        if(url.slice(-1)==='/')_url = _url.slice(0,-1);
 	        return _url;
@@ -150,7 +178,17 @@ var Spa =
 	            table[url] = route;
 	            return table;
 	        },{});
-	    }  
+	    }
+
+	    function objectFind(obj,fn){
+	        for(var k in obj){
+	            if(obj.hasOwnProperty(k)){
+	                var found = fn(obj[k]);
+	                if(found){return obj[k]}
+	            }
+	        }
+	        return null;
+	    }
 	}
 
 	//static method to build the routes list from the dom

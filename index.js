@@ -70,9 +70,9 @@ function Router(config){
     function bindLinks(){
         $('[router-link]').click(function(e){
             preventDefault(e);
-            var uri = parseUri(e.target.href);
+            var uri = parseUri($(this)[0].href);
             History.pushState(null,uri.path);
-            navigateTo(e.target.pathname);
+            navigateTo(uri.path);
         });
     }
 
@@ -118,10 +118,8 @@ function Router(config){
     }
 
     function normalizeUrl(url){
-        var _url = url;
-        if(url.charAt(0)==='/')_url = _url.slice(1);
-        if(url.slice(-1)==='/')_url = _url.slice(0,-1);
-        return _url;
+        //remove leading and trailing slashes
+        return url.replace(/^\/|\/$/g, '');
     }
 
     function buildRoutesTable(routes){
