@@ -14,8 +14,7 @@ This was done for a very small static site which needed to behave as a single pa
 * no hashfrag in browsers that support html5 history
 * simple to use
 
-
-* Features: * 
+* Features: 
 
 * uses history and pushstate to modify the url, no hashfrag
 * when showing a view, can currently use two strategies

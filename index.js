@@ -70,6 +70,7 @@ function Router(config){
     function bindLinks(){
         $('[router-link]').click(function(e){
             preventDefault(e);
+            console.log('click');
             var uri = parseUri($(this)[0].href);
             History.pushState(null,uri.path);
             navigateTo(uri.path);

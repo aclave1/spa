@@ -97,7 +97,7 @@ var Spa =
 	    function enterState(state){
 	        if(state === null || undef(state)) console.error('invalid state');
 	        currentState=state;
-	        History.pushState(null,state.url);
+	        History.push(null,state.url);
 	        navigateTo(state.url);
 	    }
 
@@ -117,9 +117,10 @@ var Spa =
 	    function bindLinks(){
 	        $('[router-link]').click(function(e){
 	            preventDefault(e);
-	            var uri = parseUri(e.target.href);
-	            History.pushState(null,uri.path);
-	            navigateTo(e.target.pathname);
+	            console.log('click');
+	            var uri = parseUri($(this)[0].href);
+	            History.push(null,uri.path);
+	            navigateTo(uri.path);
 	        });
 	    }
 
@@ -165,11 +166,8 @@ var Spa =
 	    }
 
 	    function normalizeUrl(url){
-	        if(undef(url))debugger;
-	        var _url = url;
-	        if(url.charAt(0)==='/')_url = _url.slice(1);
-	        if(url.slice(-1)==='/')_url = _url.slice(0,-1);
-	        return _url;
+	        //remove leading and trailing slashes
+	        return url.replace(/^\/|\/$/g, '');
 	    }
 
 	    function buildRoutesTable(routes){
