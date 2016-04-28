@@ -68,7 +68,7 @@ function Router(config){
     }
 
     function bindLinks(){
-        $('[router-link]').click(function(e){
+        $('[router-link], .router-link').on('click','a',function(e){
             preventDefault(e);
             console.log('click');
             var uri = parseUri($(this)[0].href);

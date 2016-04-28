@@ -97,7 +97,7 @@ var Spa =
 	    function enterState(state){
 	        if(state === null || undef(state)) console.error('invalid state');
 	        currentState=state;
-	        History.push(null,state.url);
+	        History.pushState(null,state.url);
 	        navigateTo(state.url);
 	    }
 
@@ -115,11 +115,11 @@ var Spa =
 	    }
 
 	    function bindLinks(){
-	        $('[router-link]').click(function(e){
+	        $('[router-link], .router-link').on('click','a',function(e){
 	            preventDefault(e);
 	            console.log('click');
 	            var uri = parseUri($(this)[0].href);
-	            History.push(null,uri.path);
+	            History.pushState(null,uri.path);
 	            navigateTo(uri.path);
 	        });
 	    }
