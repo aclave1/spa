@@ -2,6 +2,7 @@ var createHistory = require('history').createHistory;
 var History = createHistory();
 
 function Router(config){
+    var isScrolling = false;
     var routes = buildRoutesTable(config.routes);
     var currentState = null;
     var displayMethods = {
@@ -12,6 +13,9 @@ function Router(config){
     bindLinks();
     startRouter();
     goToStartingState();
+    if(config.watchScroll === true){
+        watchScroll();
+    }
 
     this.goToStateById = goToStateById;
     this.getCurrentState = getCurrentState;
@@ -50,7 +54,7 @@ function Router(config){
     function enterState(state){
         if(state === null || undef(state)) console.error('invalid state');
         currentState=state;
-        History.pushState(null,state.url);
+        pushHistory(state.url);
         navigateTo(state.url);
     }
 
@@ -72,9 +76,23 @@ function Router(config){
             preventDefault(e);
             console.log('click');
             var uri = parseUri($(this)[0].href);
-            History.pushState(null,uri.path);
+            pushHistory(uri.path);
             navigateTo(uri.path);
         });
+    }
+
+    function pushHistory(url){
+        var route = getRoute(url);
+        if(route !== null){
+            History.pushState(null,route.url);
+        }else{
+            History.pushState(null,url);
+        }
+    }
+
+    function getRoute(url){
+        var route = routes[normalizeUrl(url)];
+        return !undef(route) ? route : null;
     }
 
     function preventDefault(event){
@@ -94,11 +112,17 @@ function Router(config){
     }
 
     function scrollTo(el){
+        isScrolling = true;
+
+        var headerOffset = typeof config.headerOffset === 'function' ? config.headerOffset() : 0;
+
         $('html, body')
             .clearQueue()//prevents janky scrolling if this method is called frequently
             .animate({
-                scrollTop: el.offset().top
-            }, 500);
+                scrollTop: el.offset().top - headerOffset
+            }, 500,function done(){
+                isScrolling = false;
+            });
     }
 
     function showEl(el){
@@ -118,10 +142,44 @@ function Router(config){
         return showEl(el);//not implemented
     }
 
+    function watchScroll(){
+        var routeIndex = 0;
+        var sortedByPosition = [{scrollPos:0,url:'/'}].concat(config.routes.sort(function(route1,route2){
+            return route1.scrollPos - route2.scrollPos;
+        }));
+        
+
+        $(window).scroll(function(){
+            if(isScrolling) return;
+            var $window = $(this);
+            var winHeight = $window.height();
+            var scrollPos = $window.scrollTop();
+            var scrollPosIdx = sortedByPosition.findIndex(function(route,routeIdx,allRoutes){
+                if(routeIdx === 0){//start
+                    return scrollPos < allRoutes[routeIdx+1].scrollPos;
+                }else if(routeIdx === allRoutes.length-1){//end
+                    return scrollPos + winHeight > allRoutes[routeIdx].scrollPos;
+                }else{//middle
+                    return scrollPos > route.scrollPos && scrollPos < allRoutes[routeIdx+1].scrollPos;
+                }
+            });
+            if(scrollPosIdx !== routeIndex){
+                routeIndex = scrollPosIdx;
+                var newRoute = sortedByPosition[routeIndex];
+                console.log('new route');
+                console.log(scrollPos);
+                console.dir(newRoute);
+                pushHistory(newRoute.url);
+            }
+        });
+    }
+
     function normalizeUrl(url){
         //remove leading and trailing slashes
         return url.replace(/^\/|\/$/g, '');
     }
+    
+
 
     function buildRoutesTable(routes){
         return routes.reduce(function(table,route){
@@ -147,16 +205,21 @@ Router.getRoutesFromElements = function(config){
     var _config = !undef(config) ? config : {}; 
     var urlProp = !undef(_config.url) ? _config.url : 'route';
     var defaultRouteProp =  !undef(_config.defaultRoute) ? _config.defaultRoute : 'default-route';
-    var routes = $('[route]').map(function(){
+    var routes = $('[route]',document).map(function(){
         var el = $(this);
         return {
             elId:this.id,
             url:el.attr(urlProp),
-            defaultRoute:!undef(el.attr(defaultRouteProp))
+            defaultRoute:!undef(el.attr(defaultRouteProp)),
+            scrollPos:getElementScrollPosition(el)
         };
     });
     return [].slice.call(routes);
 };
+
+function getElementScrollPosition($el){
+    return $el.offset().top;
+}
 
 
 function undef(x){
