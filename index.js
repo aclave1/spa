@@ -83,6 +83,7 @@ function Router(config){
 
     function pushHistory(url){
         var route = getRoute(url);
+        if(!undef(route.title)) document.title = route.title;
         if(route !== null){
             History.pushState(null,route.url);
         }else{
@@ -103,10 +104,11 @@ function Router(config){
     function navigateTo(url){
         var route = routes[normalizeUrl(url)];
         if(!undef(route)){
-            var el = $('#'+route.elId);
+            var el = route.el;
             //if config.display is a function, allow a custom animation
             var fn = typeof config.display === 'function' ? config.display : displayMethods[config.display];
             if(undef(fn)) fn = displayMethods.scroll;
+            
             return fn(el);
         }
     }
@@ -205,13 +207,16 @@ Router.getRoutesFromElements = function(config){
     var _config = !undef(config) ? config : {}; 
     var urlProp = !undef(_config.url) ? _config.url : 'route';
     var defaultRouteProp =  !undef(_config.defaultRoute) ? _config.defaultRoute : 'default-route';
+    var titleProp = !undef(_config.titleProp) ? _config.titleProp : 'route-title';
     var routes = $('[route]',document).map(function(){
         var el = $(this);
         return {
             elId:this.id,
+            el:el,
             url:el.attr(urlProp),
             defaultRoute:!undef(el.attr(defaultRouteProp)),
-            scrollPos:getElementScrollPosition(el)
+            scrollPos:getElementScrollPosition(el),
+            title:el.attr(titleProp)
         };
     });
     return [].slice.call(routes);
